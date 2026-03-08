@@ -495,43 +495,20 @@ def did_you_mean(s, candidates, n=3, cutoff=0.8, fix=None):
 
 
 class InheritDocstrings(type):
-    """
-    This metaclass makes methods of a class automatically have their
-    docstrings filled in from the methods they override in the base
-    class.
-
-    If the class uses multiple inheritance, the docstring will be
-    chosen from the first class in the bases list, in the same way as
-    methods are normally resolved in Python.  If this results in
-    selecting the wrong docstring, the docstring will need to be
-    explicitly included on the method.
-
-    For example::
-
-        >>> from astropy.utils.misc import InheritDocstrings
-        >>> class A(metaclass=InheritDocstrings):
-        ...     def wiggle(self):
-        ...         "Wiggle the thingamajig"
-        ...         pass
-        >>> class B(A):
-        ...     def wiggle(self):
-        ...         pass
-        >>> B.wiggle.__doc__
-        u'Wiggle the thingamajig'
-    """
-
+    """Metaclass that inherits docstrings from base classes."""
+    
     def __new__(cls, name, bases, dct):
         for base in bases:
             for attr_name in dir(base):
                 if not attr_name.startswith('_'):
                     base_member = getattr(base, attr_name)
-                    # Fix: Check for functions or properties
+                    # 修复：检查函数或属性
                     if inspect.isfunction(base_member) or isinstance(base_member, property):
                         if attr_name not in dct:
                             dct[attr_name] = base_member
-                        elif not getattr(dct.get(attr_name), '__doc__', None):
-                            # Inherit docstring
-                            dct[attr_name].__doc__ = getattr(base_member, '__doc__', None)
+                        elif dct[attr_name].__doc__ is None:
+                            # 为函数或属性继承文档字符串
+                            dct[attr_name].__doc__ = base_member.__doc__
         return super().__new__(cls, name, bases, dct)
 
 
