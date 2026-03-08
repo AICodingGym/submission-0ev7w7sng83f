@@ -520,24 +520,19 @@ class InheritDocstrings(type):
         u'Wiggle the thingamajig'
     """
 
-    def __init__(cls, name, bases, dct):
-        def is_public_member(key):
-            return (
-                (key.startswith('__') and key.endswith('__')
-                 and len(key) > 4) or
-                not key.startswith('_'))
-
-        for key, val in dct.items():
-            if (inspect.isfunction(val) and
-                is_public_member(key) and
-                val.__doc__ is None):
-                for base in cls.__mro__[1:]:
-                    super_method = getattr(base, key, None)
-                    if super_method is not None:
-                        val.__doc__ = super_method.__doc__
-                        break
-
-        super().__init__(name, bases, dct)
+    def __new__(cls, name, bases, dct):
+        for base in bases:
+            for attr_name in dir(base):
+                if not attr_name.startswith('_'):
+                    base_member = getattr(base, attr_name)
+                    # Fix: Check for functions or properties
+                    if inspect.isfunction(base_member) or isinstance(base_member, property):
+                        if attr_name not in dct:
+                            dct[attr_name] = base_member
+                        elif not getattr(dct.get(attr_name), '__doc__', None):
+                            # Inherit docstring
+                            dct[attr_name].__doc__ = getattr(base_member, '__doc__', None)
+        return super().__new__(cls, name, bases, dct)
 
 
 class OrderedDescriptor(metaclass=abc.ABCMeta):
